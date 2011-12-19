@@ -1,75 +1,78 @@
-# Returns weather information from Google
+# Freeweatheronline.com integration
 #
-# weather <city> - Get the weather for a location
-# forecast <city> - Get the forecast for a location
-jsdom = require 'jsdom'
-env = process.env
+# weather <query> - can be US/CA/UK postal code or city/region
+#
+request = require('request')
+querystring = require('querystring')
 
 module.exports = (robot) ->
-  robot.respond /forecast(?: me|for|in)?\s(.*)/, (msg) ->
-    query msg, (body, err) ->
-      return msg.send err if err
+  robot.respond /(weather|forecast)( .+)?/i, (msg) ->
+    weather = new Weather(msg)
+    weather[msg.match[1]]()
 
-      city = body.getElementsByTagName("city")[0]
-      return msg.send "Sorry, but I couldn't find that location." if not city or not city.getAttribute
-      
-      city = city.getAttribute("data")
+  robot.respond /my location is (.+)/i, (msg) ->
+    msg.message.user.location = msg.match[1]
+    msg.send "Your location has been saved as #{msg.message.user.location}"
 
-      strings = []
-      
-      strings.push "The forecast for #{city} is as follows:\n"
-      for element in body.getElementsByTagName("forecast_conditions")
-        day = element.getElementsByTagName("day_of_week")[0].getAttribute("data")
-        
-        if env.HUBOT_WEATHER_CELSIUS
-          low = convertTempToCelsius(element.getElementsByTagName("low")[0].getAttribute("data")) + "ºC"
-        else
-          low = element.getElementsByTagName("low")[0].getAttribute("data") + "ºF"
-        
-        if env.HUBOT_WEATHER_CELSIUS
-          high = convertTempToCelsius(element.getElementsByTagName("high")[0].getAttribute("data")) + "ºC"
-        else
-          high = element.getElementsByTagName("high")[0].getAttribute("data") + "ºF"
-        
-        condition = element.getElementsByTagName("condition")[0].getAttribute("data")
-        strings.push "#{day}: #{condition} with a high of #{high} and a low of #{low}."
+  robot.respond /what is my location\?/i, (msg) ->
+    user = msg.message.user
+    if user.location?
+      msg.send "Your location is: #{user.location}"
+    else
+      msg.send "I do not have a location on file for you"
 
-      msg.send strings.join "\n"
+class Weather
+  constructor: (@msg) ->
+    @parseCode()
 
-  robot.respond /weather(?: me|for|in)?\s(.*)/, (msg) ->
-    query msg, (body, err) ->
-      return msg.send err if err
-
-      city = body.getElementsByTagName("city")[0]
-      return msg.send "Sorry, but you didn't specify a location." if not city or not city.getAttribute
-      
-      city = city.getAttribute("data")
-      currentCondition = body.getElementsByTagName("current_conditions")[0].getAttribute("data")
-      conditions = body.getElementsByTagName("current_conditions")[0].getElementsByTagName("condition")[0].getAttribute("data")
-      humidity = body.getElementsByTagName("current_conditions")[0].getElementsByTagName("humidity")[0].getAttribute("data").split(' ')[1]
-
-      if env.HUBOT_WEATHER_CELSIUS
-        temp = body.getElementsByTagName("current_conditions")[0].getElementsByTagName("temp_c")[0].getAttribute("data") + "ºC"
+  parseCode: ->
+    code = @msg.match[2]
+    if code?
+      @code = querystring.escape code.toString().replace(/^\s/,'')
+    else
+      if @msg.message.user.location?
+        @code = @msg.message.user.location
       else
-        temp = body.getElementsByTagName("current_conditions")[0].getElementsByTagName("temp_f")[0].getAttribute("data") + "ºF"
+        @msg.send "You did not supply a location, and I have no location on file"
+
+  weather: ->
+    if @code?
+      @get (data) =>
+        location = @region data.nearest_area[0]
+        item = data.current_condition[0]
+        condition = item.weatherDesc[0].value
+        windSpeed = "#{item.winddir16Point} wind at #{item.windspeedKmph}kmph/#{item.windspeedMiles}mph"
+        @msg.send "#{location}: #{condition}, #{item.temp_C}C/#{item.temp_F}F with #{windSpeed}"
       
-      msg.send "Currently in #{city} it is #{conditions} and #{temp} with a humidity of #{humidity}.\n"
+  forecast: ->
+    if @code?
+      @get (data) =>
+        location = @region data.nearest_area[0]
+        @msg.send "Forecast for #{location}:"
+        for item, idx in data.weather
+          condition = item.weatherDesc[0].value
+          windSpeed = "#{item.winddir16Point} wind at #{item.windspeedKmph}kmph/#{item.windspeedMiles}mph"
+          @msg.send "#{item.date}: #{condition}, High #{item.tempMaxC}C/#{item.tempMaxF}F, Low #{item.tempMinC}C/#{item.tempMinF}F with #{windSpeed}"
 
-  getDom = (xml) ->
-    body = jsdom.jsdom(xml)
-    throw Error("No XML data returned.") if body.getElementsByTagName("weather")[0].childNodes.length == 0
-    body
-
-  convertTempToCelsius = (f) ->
-    ((5 / 9) * (f - 32)).toFixed 0
-
-  query = (msg, cb) ->
-    location = msg.match[1]
-    msg.http("http://www.google.com/ig/api")
-      .query(weather: location)
-      .get() (err, res, body) ->
+  get: (callback) ->
+    url = "http://free.worldweatheronline.com/feed/weather.ashx?q=#{@code}&cc=yes&format=json&includeLocation=yes&key=ece8d8682c193256112104&num_of_days=5"
+    request url, (error, res, body) =>
+      if error?
+        @msg.send "I cannot process something in your request"
+      else
         try
-          body = getDom body
-        catch err
-          err = "Could not fetch weather data."
-        cb(body, err)
+          data = JSON.parse(body).data
+          if data.error?
+            @msg.send "That place does not seem to exist in this reality"
+          else
+            callback(data)
+        catch error
+          @msg.send "I cannot process something in your request"
+
+  region: (nearest_area) ->
+    if nearest_area.region?
+      region = "#{nearest_area.region[0].value}, "
+    else
+      region = ""
+    return "#{nearest_area.areaName[0].value}, #{region}#{nearest_area.country[0].value}"
+
