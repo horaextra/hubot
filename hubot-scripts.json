@@ -1,1 +1,25 @@
-["redis-brain.coffee", "tweet.coffee", "shipit.coffee"]
+[
+  "shipit.coffee",
+  "google-images.coffee",
+  "help.coffee", 
+  "maps.coffee",
+  "storage.coffee",
+  "polite.coffee",
+  "redis-brain.coffee",
+  "rules.coffee",
+  "rubygems.coffee",
+  "translate.coffee",
+  "youtube.coffee",
+  "meme_generator.coffee",
+  "wolfram.coffee",
+  "shorten.coffee",
+  "directions.coffee",
+  "gemwhois.coffee",
+  "eight-ball.coffee",
+  "achievement_unlocked.coffee",
+  "ascii.coffee",
+  "keep-alive.coffee",
+  "quote.coffee",
+  "remind.coffee",
+  "faceup.coffee"
+]
