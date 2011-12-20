@@ -1,3 +1,7 @@
+# Versão do Hubot que está rodando no IRC do #horaextra. Pode ser usado também para campfire. 
+
+
+
 # Hubot
 
 This is a version of GitHub's Campfire bot, hubot. He's pretty cool.
