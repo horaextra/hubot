@@ -16,13 +16,12 @@
 
   "dependencies": {
    "hubot-irc": ">= 0.0.1",
-   "hubot": "2.0.7",
-   "hubot-scripts": "2.0.4",
+   "hubot": "2.1.2",
+   "hubot-scripts": ">= 2.0.4",
    "redis": "0.7.1",
    "request" : "2.1.1",
    "soupselect": "0.2.0",
    "xml2js": ">= 0.1.13",
-   "wolfram": ">= 0.2.0",
    "optparse": "1.0.3"
   }
 }
