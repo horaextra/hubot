@@ -9,7 +9,6 @@
   "google.coffee",
   "faceup.coffee",
   "quote.coffee", 
-  "travis.coffee",
   "tweet.coffee", 
   "storage.coffee",
   "cheer.coffee",
@@ -30,4 +29,6 @@
   "rimshot.coffee",
   "robot-memes.coffee", 
   "xkcd.coffee",
+  "github-issues.coffee",
+  "github-credentials.coffee",
   "shipit.coffee"]
